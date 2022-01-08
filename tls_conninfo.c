@@ -1,4 +1,4 @@
-/* $OpenBSD: tls_conninfo.c,v 1.21 2019/11/02 13:37:59 jsing Exp $ */
+/* $OpenBSD: tls_conninfo.c,v 1.22 2021/01/05 15:57:38 tb Exp $ */
 /*
  * Copyright (c) 2015 Joel Sing <jsing@openbsd.org>
  * Copyright (c) 2015 Bob Beck <beck@openbsd.org>
@@ -21,12 +21,6 @@
 
 #include <tls.h>
 #include "tls_internal.h"
-
-#ifdef WIN32
-# include <time.h>
-#endif
-
-int ASN1_time_tm_clamp_notafter(struct tm *tm);
 
 int
 tls_hex_string(const unsigned char *in, size_t inlen, char **out,
@@ -228,9 +222,10 @@ tls_conninfo_cert_pem(struct tls *ctx)
 
 	free(ctx->conninfo->peer_cert);
 	ctx->conninfo->peer_cert_len = 0;
-	if ((ctx->conninfo->peer_cert = ptr = malloc(len)) == NULL)
+	if ((ctx->conninfo->peer_cert = ptr = malloc(len + 1)) == NULL)
 		goto err;
 
+	ctx->conninfo->peer_cert_len = len;
 	for (i = 0; i < ctx->peer_chain_len; ++i) {
 		ptr += br_pem_encode(ptr, ctx->peer_chain[i].data,
 		    ctx->peer_chain[i].data_len, "X509 CERTIFICATE", 0);

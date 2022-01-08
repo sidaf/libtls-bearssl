@@ -1,4 +1,4 @@
-/* $OpenBSD: tls_server.c,v 1.45 2019/05/13 22:36:01 bcook Exp $ */
+/* $OpenBSD: tls_server.c,v 1.47 2021/06/14 03:53:59 tb Exp $ */
 /*
  * Copyright (c) 2014 Joel Sing <jsing@openbsd.org>
  *
@@ -111,11 +111,15 @@ policy_choose(const br_ssl_server_policy_class **vtable,
 	 * (Python, Ruby and Safari) are not RFC compliant. To avoid handshake
 	 * failures, pretend that we did not receive the extension.
 	 */
-	if (inet_pton(AF_INET, name, &addrbuf) == 1 ||
+	if (name[0] == '\0' ||
+	    inet_pton(AF_INET, name, &addrbuf) == 1 ||
 	    inet_pton(AF_INET6, name, &addrbuf) == 1) {
 		name = NULL;
+	} else if ((ctx->servername = strdup(name)) == NULL) {
+		return 0;
 	}
 
+	/* Find appropriate keypair for requested servername. */
 	for (kp = ctx->config->keypair; kp != NULL; kp = kp->next) {
 		if (kp->chain_len == 0)
 			continue;
@@ -340,7 +344,7 @@ tls_accept_common(struct tls *ctx)
 			goto err;
 
 		if (ctx->config->ca_len == 0) {
-			tls_set_error(ctx, "cannot verify client without trust anchors");
+			tls_set_errorx(ctx, "cannot verify client without trust anchors");
 			goto err;
 		}
 

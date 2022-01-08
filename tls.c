@@ -1,4 +1,4 @@
-/* $OpenBSD: tls.c,v 1.85 2020/05/24 15:12:54 jsing Exp $ */
+/* $OpenBSD: tls.c,v 1.89 2021/02/01 15:35:41 tb Exp $ */
 /*
  * Copyright (c) 2014 Joel Sing <jsing@openbsd.org>
  *
@@ -610,8 +610,8 @@ tls_reset(struct tls *ctx)
 }
 
 /*
- * Run the TLS engine until the target state is reached, or an error
- * occurs.
+ * Run the TLS engine until one of the target states is reached and
+ * none of the finish states remain, or an error occurs.
  *
  * Return value:
  *    1  The desired state was reached.
@@ -623,7 +623,7 @@ tls_reset(struct tls *ctx)
  *       value (for instance, TLS_WANT_POLLIN or TLS_WANT_POLLOUT).
  */
 static int
-tls_run_until(struct tls *ctx, unsigned target, const char *prefix)
+tls_run_until(struct tls *ctx, unsigned target, unsigned finish, const char *prefix)
 {
 	br_ssl_engine_context *eng = &ctx->conn->u.engine;
 	unsigned state;
@@ -655,12 +655,12 @@ tls_run_until(struct tls *ctx, unsigned target, const char *prefix)
 			br_ssl_engine_sendrec_ack(eng, ret);
 			continue;
 		}
-		if (state & target)
+		if (state & target && !(state & finish))
 			break;
 		if (state & BR_SSL_RECVAPP) {
 			/* we use a bidirectional buffer, so this
 			 * should never happen */
-			tls_set_error(ctx, "unexpected I/O state");
+			tls_set_errorx(ctx, "unexpected I/O state");
 			goto out;
 		}
 		if (state & BR_SSL_RECVREC) {
@@ -717,7 +717,7 @@ tls_handshake(struct tls *ctx)
 
 	ctx->state |= TLS_SSL_NEEDS_SHUTDOWN;
 
-	if ((rv = tls_run_until(ctx, BR_SSL_SENDAPP | BR_SSL_RECVAPP, "handshake")) != 1)
+	if ((rv = tls_run_until(ctx, BR_SSL_SENDAPP | BR_SSL_RECVAPP, 0, "handshake")) != 1)
 		goto out;
 
 	ctx->state |= TLS_HANDSHAKE_COMPLETE;
@@ -750,7 +750,7 @@ tls_read(struct tls *ctx, void *buf, size_t buflen)
 			goto out;
 	}
 
-	if ((rv = tls_run_until(ctx, BR_SSL_RECVAPP, "read")) != 1)
+	if ((rv = tls_run_until(ctx, BR_SSL_RECVAPP, 0, "read")) != 1)
 		goto out;
 
 	app = br_ssl_engine_recvapp_buf(eng, &applen);
@@ -783,7 +783,7 @@ tls_write(struct tls *ctx, const void *buf, size_t buflen)
 	}
 
 	for (;;) {
-		if ((rv = tls_run_until(ctx, BR_SSL_SENDAPP, "write")) == 0) {
+		if ((rv = tls_run_until(ctx, BR_SSL_SENDAPP, 0, "write")) == 0) {
 			tls_set_ssl_errorx(ctx, "connection closed");
 			rv = -1;
 		}
@@ -829,9 +829,11 @@ tls_close(struct tls *ctx)
 			br_ssl_engine_close(eng);
 			ctx->state |= TLS_SSL_IN_SHUTDOWN;
 		}
-		rv = tls_run_until(ctx, 0, "close");
+		rv = tls_run_until(ctx, -1, BR_SSL_SENDREC, "close");
 		if (rv == TLS_WANT_POLLIN || rv == TLS_WANT_POLLOUT)
 			goto out;
+		if (rv == 1)
+			rv = 0;
 		ctx->state &= ~TLS_SSL_NEEDS_SHUTDOWN;
 	}
 

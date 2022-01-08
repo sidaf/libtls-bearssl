@@ -24,7 +24,7 @@ the libtls API on top of BearSSL.
 ## Status
 
 libtls-bearssl implements nearly all features of the libtls API
-(version 3.3.0).  However, there are some that are missing, since
+(version 3.3.3).  However, there are some that are missing, since
 they are not supported by BearSSL.
 
 - OCSP stapling. Attempts to configure this will fail.
@@ -39,6 +39,9 @@ they are not supported by BearSSL.
   string, it will return `NULL`.
 - Session caching. BearSSL does implement this (though not session
   tickets, RFC 5077), so this may be added in the future.
+- Keys and certificates using CRLF as the line ending are not
+  supported. They must first be converted to use unix-style line
+  endings (LF).
 
 ## Mailing list
 
