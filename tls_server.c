@@ -25,7 +25,11 @@
 
 #include <errno.h>
 #include <stdlib.h>
+#ifdef _MSC_VER
+#include <io.h>
+#else
 #include <unistd.h>
+#endif
 #include <tls.h>
 #include "tls_internal.h"
 

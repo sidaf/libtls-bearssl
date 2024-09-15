@@ -24,11 +24,18 @@
 #include <ctype.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <pthread.h>
 #include <stdlib.h>
-#include <strings.h>
 #include <time.h>
+
+#ifdef _MSC_VER
+#include <io.h>
+#define strncasecmp _strnicmp
+#define strcasecmp _stricmp
+#else
 #include <unistd.h>
+#include <pthread.h>
+#include <strings.h>
+#endif
 
 #include <tls.h>
 

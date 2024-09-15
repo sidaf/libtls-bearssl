@@ -16,7 +16,7 @@
  */
 
 #ifdef WIN32
-# include <Winsock2.h>
+# include <winsock2.h>
 #else
 # include <sys/socket.h>
 #endif
@@ -27,7 +27,13 @@
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
+#ifdef _MSC_VER
+#include <io.h>
+int vasprintf(char **buf, const char *fmt, va_list ap);
+int asprintf(char **strp, const char *fmt, ...);
+#else
 #include <unistd.h>
+#endif
 
 #include <tls.h>
 #include "tls_internal.h"
@@ -36,6 +42,17 @@ static struct tls_config *tls_config_default;
 
 static int tls_init_rv = -1;
 
+#ifdef _MSC_VER
+BOOL CALLBACK tls_do_init(PINIT_ONCE InitOnce, PVOID Parameter, PVOID *lpContex) {
+	if ((tls_config_default = tls_config_new_internal()) == NULL)
+		return TRUE;
+
+	tls_config_default->refcount++;
+
+	tls_init_rv = 0;
+	return TRUE;
+}
+#else
 static void
 tls_do_init(void)
 {
@@ -46,15 +63,20 @@ tls_do_init(void)
 
 	tls_init_rv = 0;
 }
+#endif
 
 int
 tls_init(void)
 {
+#ifdef _MSC_VER
+	static INIT_ONCE s_init_once;
+	InitOnceExecuteOnce(&s_init_once, tls_do_init, NULL, NULL);
+#else
 	static pthread_once_t once = PTHREAD_ONCE_INIT;
 
 	if (pthread_once(&once, tls_do_init) != 0)
 		return -1;
-
+#endif
 	return tls_init_rv;
 }
 

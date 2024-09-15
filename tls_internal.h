@@ -245,26 +245,54 @@ int tls_set_cbs(struct tls *ctx,
 
 void tls_error_clear(struct tls_error *error);
 int tls_error_set(struct tls_error *error, const char *fmt, ...)
+#ifdef _MSC_VER
+;
+#else
     __attribute__((__format__ (printf, 2, 3)))
     __attribute__((__nonnull__ (2)));
+#endif
 int tls_error_setx(struct tls_error *error, const char *fmt, ...)
-    __attribute__((__format__ (printf, 2, 3)))
-    __attribute__((__nonnull__ (2)));
+#ifdef _MSC_VER
+;
+#else
+__attribute__((__format__ (printf, 2, 3)))
+__attribute__((__nonnull__ (2)));
+#endif
 int tls_config_set_error(struct tls_config *cfg, const char *fmt, ...)
-    __attribute__((__format__ (printf, 2, 3)))
-    __attribute__((__nonnull__ (2)));
+#ifdef _MSC_VER
+;
+#else
+__attribute__((__format__ (printf, 2, 3)))
+__attribute__((__nonnull__ (2)));
+#endif
 int tls_config_set_errorx(struct tls_config *cfg, const char *fmt, ...)
-    __attribute__((__format__ (printf, 2, 3)))
-    __attribute__((__nonnull__ (2)));
+#ifdef _MSC_VER
+;
+#else
+__attribute__((__format__ (printf, 2, 3)))
+__attribute__((__nonnull__ (2)));
+#endif
 int tls_set_error(struct tls *ctx, const char *fmt, ...)
-    __attribute__((__format__ (printf, 2, 3)))
-    __attribute__((__nonnull__ (2)));
+#ifdef _MSC_VER
+;
+#else
+__attribute__((__format__ (printf, 2, 3)))
+__attribute__((__nonnull__ (2)));
+#endif
 int tls_set_errorx(struct tls *ctx, const char *fmt, ...)
-    __attribute__((__format__ (printf, 2, 3)))
-    __attribute__((__nonnull__ (2)));
+#ifdef _MSC_VER
+;
+#else
+__attribute__((__format__ (printf, 2, 3)))
+__attribute__((__nonnull__ (2)));
+#endif
 int tls_set_ssl_errorx(struct tls *ctx, const char *fmt, ...)
-    __attribute__((__format__ (printf, 2, 3)))
-    __attribute__((__nonnull__ (2)));
+#ifdef _MSC_VER
+;
+#else
+__attribute__((__format__ (printf, 2, 3)))
+__attribute__((__nonnull__ (2)));
+#endif
 
 int tls_ssl_error(struct tls *ctx, br_ssl_engine_context *eng, ssize_t ret,
     const char *prefix);

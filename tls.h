@@ -22,10 +22,23 @@
 extern "C" {
 #endif
 
+#if defined(_WIN32)
+#define EXPORT_SYM __declspec(dllexport)
+#elif defined(__ELF__)
+#define EXPORT_SYM __attribute__ ((visibility ("default")))
+#endif
+
 #include <sys/types.h>
 
 #include <stddef.h>
 #include <stdint.h>
+
+#ifdef _MSC_VER
+#if defined(_MSC_VER)
+#include <BaseTsd.h>
+    typedef SSIZE_T ssize_t;
+#endif
+#endif
 
 #define TLS_API	20200120
 
@@ -80,13 +93,13 @@ typedef ssize_t (*tls_read_cb)(struct tls *_ctx, void *_buf, size_t _buflen,
 typedef ssize_t (*tls_write_cb)(struct tls *_ctx, const void *_buf,
     size_t _buflen, void *_cb_arg);
 
-int tls_init(void);
+EXPORT_SYM int tls_init(void);
 
 const char *tls_config_error(struct tls_config *_config);
-const char *tls_error(struct tls *_ctx);
+EXPORT_SYM const char *tls_error(struct tls *_ctx);
 
-struct tls_config *tls_config_new(void);
-void tls_config_free(struct tls_config *_config);
+EXPORT_SYM struct tls_config *tls_config_new(void);
+EXPORT_SYM void tls_config_free(struct tls_config *_config);
 
 const char *tls_default_ca_cert_file(void);
 
@@ -101,23 +114,23 @@ int tls_config_add_keypair_ocsp_mem(struct tls_config *_config, const uint8_t *_
     size_t _cert_len, const uint8_t *_key, size_t _key_len,
     const uint8_t *_staple, size_t _staple_len);
 int tls_config_set_alpn(struct tls_config *_config, const char *_alpn);
-int tls_config_set_ca_file(struct tls_config *_config, const char *_ca_file);
+EXPORT_SYM int tls_config_set_ca_file(struct tls_config *_config, const char *_ca_file);
 int tls_config_set_ca_path(struct tls_config *_config, const char *_ca_path);
-int tls_config_set_ca_mem(struct tls_config *_config, const uint8_t *_ca,
+EXPORT_SYM int tls_config_set_ca_mem(struct tls_config *_config, const uint8_t *_ca,
     size_t _len);
-int tls_config_set_cert_file(struct tls_config *_config,
+EXPORT_SYM int tls_config_set_cert_file(struct tls_config *_config,
     const char *_cert_file);
-int tls_config_set_cert_mem(struct tls_config *_config, const uint8_t *_cert,
+EXPORT_SYM int tls_config_set_cert_mem(struct tls_config *_config, const uint8_t *_cert,
     size_t _len);
-int tls_config_set_ciphers(struct tls_config *_config, const char *_ciphers);
+EXPORT_SYM int tls_config_set_ciphers(struct tls_config *_config, const char *_ciphers);
 int tls_config_set_crl_file(struct tls_config *_config, const char *_crl_file);
 int tls_config_set_crl_mem(struct tls_config *_config, const uint8_t *_crl,
     size_t _len);
-int tls_config_set_dheparams(struct tls_config *_config, const char *_params);
+EXPORT_SYM int tls_config_set_dheparams(struct tls_config *_config, const char *_params);
 int tls_config_set_ecdhecurve(struct tls_config *_config, const char *_curve);
 int tls_config_set_ecdhecurves(struct tls_config *_config, const char *_curves);
-int tls_config_set_key_file(struct tls_config *_config, const char *_key_file);
-int tls_config_set_key_mem(struct tls_config *_config, const uint8_t *_key,
+EXPORT_SYM int tls_config_set_key_file(struct tls_config *_config, const char *_key_file);
+EXPORT_SYM int tls_config_set_key_mem(struct tls_config *_config, const uint8_t *_key,
     size_t _len);
 int tls_config_set_keypair_file(struct tls_config *_config,
     const char *_cert_file, const char *_key_file);
@@ -132,24 +145,24 @@ int tls_config_set_ocsp_staple_mem(struct tls_config *_config,
     const uint8_t *_staple, size_t _len);
 int tls_config_set_ocsp_staple_file(struct tls_config *_config,
     const char *_staple_file);
-int tls_config_set_protocols(struct tls_config *_config, uint32_t _protocols);
+EXPORT_SYM int tls_config_set_protocols(struct tls_config *_config, uint32_t _protocols);
 int tls_config_set_session_fd(struct tls_config *_config, int _session_fd);
-int tls_config_set_verify_depth(struct tls_config *_config, int _verify_depth);
+EXPORT_SYM int tls_config_set_verify_depth(struct tls_config *_config, int _verify_depth);
 
 void tls_config_prefer_ciphers_client(struct tls_config *_config);
 void tls_config_prefer_ciphers_server(struct tls_config *_config);
 
-void tls_config_insecure_noverifycert(struct tls_config *_config);
-void tls_config_insecure_noverifyname(struct tls_config *_config);
-void tls_config_insecure_noverifytime(struct tls_config *_config);
-void tls_config_verify(struct tls_config *_config);
+EXPORT_SYM void tls_config_insecure_noverifycert(struct tls_config *_config);
+EXPORT_SYM void tls_config_insecure_noverifyname(struct tls_config *_config);
+EXPORT_SYM void tls_config_insecure_noverifytime(struct tls_config *_config);
+EXPORT_SYM void tls_config_verify(struct tls_config *_config);
 
 void tls_config_ocsp_require_stapling(struct tls_config *_config);
-void tls_config_verify_client(struct tls_config *_config);
-void tls_config_verify_client_optional(struct tls_config *_config);
+EXPORT_SYM void tls_config_verify_client(struct tls_config *_config);
+EXPORT_SYM void tls_config_verify_client_optional(struct tls_config *_config);
 
 void tls_config_clear_keys(struct tls_config *_config);
-int tls_config_parse_protocols(uint32_t *_protocols, const char *_protostr);
+EXPORT_SYM int tls_config_parse_protocols(uint32_t *_protocols, const char *_protostr);
 
 int tls_config_set_session_id(struct tls_config *_config,
     const unsigned char *_session_id, size_t _len);
@@ -157,15 +170,15 @@ int tls_config_set_session_lifetime(struct tls_config *_config, int _lifetime);
 int tls_config_add_ticket_key(struct tls_config *_config, uint32_t _keyrev,
     unsigned char *_key, size_t _keylen);
 
-struct tls *tls_client(void);
-struct tls *tls_server(void);
-int tls_configure(struct tls *_ctx, struct tls_config *_config);
+EXPORT_SYM struct tls *tls_client(void);
+EXPORT_SYM struct tls *tls_server(void);
+EXPORT_SYM int tls_configure(struct tls *_ctx, struct tls_config *_config);
 void tls_reset(struct tls *_ctx);
-void tls_free(struct tls *_ctx);
+EXPORT_SYM void tls_free(struct tls *_ctx);
 
 int tls_accept_fds(struct tls *_ctx, struct tls **_cctx, int _fd_read,
     int _fd_write);
-int tls_accept_socket(struct tls *_ctx, struct tls **_cctx, int _socket);
+EXPORT_SYM int tls_accept_socket(struct tls *_ctx, struct tls **_cctx, int _socket);
 int tls_accept_cbs(struct tls *_ctx, struct tls **_cctx,
     tls_read_cb _read_cb, tls_write_cb _write_cb, void *_cb_arg);
 int tls_connect(struct tls *_ctx, const char *_host, const char *_port);
@@ -173,13 +186,13 @@ int tls_connect_fds(struct tls *_ctx, int _fd_read, int _fd_write,
     const char *_servername);
 int tls_connect_servername(struct tls *_ctx, const char *_host,
     const char *_port, const char *_servername);
-int tls_connect_socket(struct tls *_ctx, int _s, const char *_servername);
+EXPORT_SYM int tls_connect_socket(struct tls *_ctx, int _s, const char *_servername);
 int tls_connect_cbs(struct tls *_ctx, tls_read_cb _read_cb,
     tls_write_cb _write_cb, void *_cb_arg, const char *_servername);
 int tls_handshake(struct tls *_ctx);
-ssize_t tls_read(struct tls *_ctx, void *_buf, size_t _buflen);
-ssize_t tls_write(struct tls *_ctx, const void *_buf, size_t _buflen);
-int tls_close(struct tls *_ctx);
+EXPORT_SYM ssize_t tls_read(struct tls *_ctx, void *_buf, size_t _buflen);
+EXPORT_SYM ssize_t tls_write(struct tls *_ctx, const void *_buf, size_t _buflen);
+EXPORT_SYM int tls_close(struct tls *_ctx);
 
 int tls_peer_cert_provided(struct tls *_ctx);
 int tls_peer_cert_contains_name(struct tls *_ctx, const char *_name);
