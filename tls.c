@@ -838,7 +838,11 @@ tls_close(struct tls *ctx)
 	}
 
 	if (ctx->socket != -1) {
+#ifdef _WIN32
+		if (shutdown(ctx->socket, SD_BOTH) != 0) {
+#else
 		if (shutdown(ctx->socket, SHUT_RDWR) != 0) {
+#endif
 			if (rv == 0 &&
 			    errno != ENOTCONN && errno != ECONNRESET) {
 				tls_set_error(ctx, "shutdown");
