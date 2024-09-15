@@ -19,7 +19,8 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #ifdef _MSC_VER
-#include <io.h>
+#define read(fd, buf, len)  recv(fd, (char *) (buf), (int) (len), 0)
+#define write(fd, buf, len) send(fd, (char *) (buf), (int) (len), 0)
 #else
 #include <unistd.h>
 #endif
@@ -33,7 +34,11 @@ tls_fd_read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)
 	ssize_t rv;
 
 	rv = read(ctx->fd_read, buf, buflen);
+#ifdef _MSC_VER
+	if (rv < 0 && WSAGetLastError() == WSAEWOULDBLOCK)
+#else
 	if (rv < 0 && errno == EAGAIN)
+#endif
 		return TLS_WANT_POLLIN;
 	return rv;
 }
@@ -44,7 +49,11 @@ tls_fd_write_cb(struct tls *ctx, const void *buf, size_t buflen, void *cb_arg)
 	ssize_t rv;
 
 	rv = write(ctx->fd_write, buf, buflen);
+#ifdef _MSC_VER
+	if (rv < 0 && WSAGetLastError() == WSAEWOULDBLOCK)
+#else
 	if (rv < 0 && errno == EAGAIN)
+#endif
 		return TLS_WANT_POLLOUT;
 	return rv;
 }
