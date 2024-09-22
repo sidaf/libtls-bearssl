@@ -19,14 +19,16 @@
 #include <fcntl.h>
 #include <stdlib.h>
 #ifdef _MSC_VER
-#define read(fd, buf, len)  recv(fd, (char *) (buf), (int) (len), 0)
-#define write(fd, buf, len) send(fd, (char *) (buf), (int) (len), 0)
+#define read(fd, buf, len)  recv((SOCKET)fd, (char *) (buf), (int) (len), 0)
+#define write(fd, buf, len) send((SOCKET)fd, (char *) (buf), (int) (len), 0)
 #else
 #include <unistd.h>
 #endif
 
 #include <tls.h>
 #include "tls_internal.h"
+
+#include <stdio.h>
 
 ssize_t
 tls_fd_read_cb(struct tls *ctx, void *buf, size_t buflen, void *cb_arg)

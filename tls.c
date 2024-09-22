@@ -19,16 +19,16 @@
 # include <winsock2.h>
 #else
 # include <sys/socket.h>
+#include <errno.h>
 #endif
 
-#include <errno.h>
 #include <limits.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <stdlib.h>
 #include <stdio.h>
 #ifdef _MSC_VER
-#include <io.h>
+#define close(fd) closesocket((SOCKET)fd)
 int vasprintf(char **buf, const char *fmt, va_list ap);
 int asprintf(char **strp, const char *fmt, ...);
 #else
@@ -95,8 +95,13 @@ tls_error_clear(struct tls_error *error)
 	error->tls = 0;
 }
 
+#ifdef _MSC_VER
+static int
+tls_error_vset(struct tls_error *error, unsigned long errnum, const char *fmt, va_list ap)
+#else
 static int
 tls_error_vset(struct tls_error *error, int errnum, const char *fmt, va_list ap)
+#endif
 {
 	char *errmsg = NULL;
 	int rv = -1;
@@ -116,10 +121,25 @@ tls_error_vset(struct tls_error *error, int errnum, const char *fmt, va_list ap)
 		return (0);
 	}
 
+#ifdef _MSC_VER
+	char buffer[1024]; // Static buffer to hold the error message
+	DWORD flags = FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS;
+
+	// Use FormatMessage to retrieve the error message for the error code
+	if (FormatMessageA(flags, NULL, errnum, 0, buffer, sizeof(buffer), NULL) == 0) {
+		snprintf(buffer, sizeof(buffer), "Unknown error: %d", errnum);
+	}
+
+	if (asprintf(&error->msg, "%s: %s", errmsg, buffer) == -1) {
+		error->msg = NULL;
+		goto err;
+	}
+#else
 	if (asprintf(&error->msg, "%s: %s", errmsg, strerror(errnum)) == -1) {
 		error->msg = NULL;
 		goto err;
 	}
+#endif
 	rv = 0;
 
  err:
@@ -132,9 +152,14 @@ int
 tls_error_set(struct tls_error *error, const char *fmt, ...)
 {
 	va_list ap;
-	int errnum, rv;
+  int rv;
 
+#ifdef _MSC_VER
+  unsigned long errnum = GetLastError();
+#else
+	int errnum;
 	errnum = errno;
+#endif
 
 	va_start(ap, fmt);
 	rv = tls_error_vset(error, errnum, fmt, ap);
@@ -160,9 +185,14 @@ int
 tls_config_set_error(struct tls_config *config, const char *fmt, ...)
 {
 	va_list ap;
-	int errnum, rv;
+	int rv;
 
+#ifdef _MSC_VER
+	unsigned long errnum = GetLastError();
+#else
+	int errnum;
 	errnum = errno;
+#endif
 
 	va_start(ap, fmt);
 	rv = tls_error_vset(&config->error, errnum, fmt, ap);
@@ -188,9 +218,14 @@ int
 tls_set_error(struct tls *ctx, const char *fmt, ...)
 {
 	va_list ap;
-	int errnum, rv;
+	int rv;
 
+#ifdef _MSC_VER
+	unsigned long errnum = GetLastError();
+#else
+	int errnum;
 	errnum = errno;
+#endif
 
 	va_start(ap, fmt);
 	rv = tls_error_vset(&ctx->error, errnum, fmt, ap);
@@ -613,7 +648,11 @@ tls_reset(struct tls *ctx)
 
 	ctx->peer_chain = NULL;
 
+#ifdef _WIN32
+	ctx->socket = INVALID_SOCKET;
+#else
 	ctx->socket = -1;
+#endif
 	ctx->state = 0;
 
 	free(ctx->servername);
@@ -752,8 +791,10 @@ tls_handshake(struct tls *ctx)
 	rv = 0;
 
  out:
+#ifndef _MSC_VER
 	/* Prevent callers from performing incorrect error handling */
 	errno = 0;
+#endif
 	return (rv);
 }
 
@@ -784,8 +825,10 @@ tls_read(struct tls *ctx, void *buf, size_t buflen)
 	rv = applen;
 
  out:
+#ifndef _MSC_VER
 	/* Prevent callers from performing incorrect error handling */
 	errno = 0;
+#endif
 	return (rv);
 }
 
@@ -827,8 +870,10 @@ tls_write(struct tls *ctx, const void *buf, size_t buflen)
 	ctx->conn->write_len = 0;
 
  out:
+#ifndef _MSC_VER
 	/* Prevent callers from performing incorrect error handling */
 	errno = 0;
+#endif
 	return (rv);
 }
 
@@ -859,14 +904,31 @@ tls_close(struct tls *ctx)
 		ctx->state &= ~TLS_SSL_NEEDS_SHUTDOWN;
 	}
 
-	if (ctx->socket != -1) {
 #ifdef _WIN32
+	if ((ctx->socket) != INVALID_SOCKET) {
+		u_long argp = 0;
+		ioctlsocket(ctx->socket, FIONBIO, &argp);
 		if (shutdown(ctx->socket, SD_BOTH) != 0) {
+			if (rv == 0 && errno != ENOTCONN && errno != ECONNRESET) {
+
+				tls_set_error(ctx, "shutdown");
+				rv = -1;
+			}
+		}
+		if (close(ctx->socket) != 0) {
+			if (rv == 0) {
+				tls_set_error(ctx, "close");
+				rv = -1;
+			}
+		}
+		argp = 1;
+		ioctlsocket(ctx->socket, FIONBIO, &argp);
+		ctx->socket = INVALID_SOCKET;
 #else
+	if (ctx->socket != -1) {
 		if (shutdown(ctx->socket, SHUT_RDWR) != 0) {
-#endif
-			if (rv == 0 &&
-			    errno != ENOTCONN && errno != ECONNRESET) {
+			if (rv == 0 && errno != ENOTCONN && errno != ECONNRESET) {
+
 				tls_set_error(ctx, "shutdown");
 				rv = -1;
 			}
@@ -878,6 +940,7 @@ tls_close(struct tls *ctx)
 			}
 		}
 		ctx->socket = -1;
+#endif
 	}
 
 	if ((ctx->state & TLS_EOF_NO_CLOSE_NOTIFY) != 0) {
@@ -886,7 +949,9 @@ tls_close(struct tls *ctx)
 	}
 
  out:
+#ifndef _MSC_VER
 	/* Prevent callers from performing incorrect error handling */
 	errno = 0;
+#endif
 	return (rv);
 }

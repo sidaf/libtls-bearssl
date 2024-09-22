@@ -176,20 +176,33 @@ EXPORT_SYM int tls_configure(struct tls *_ctx, struct tls_config *_config);
 void tls_reset(struct tls *_ctx);
 EXPORT_SYM void tls_free(struct tls *_ctx);
 
-int tls_accept_fds(struct tls *_ctx, struct tls **_cctx, int _fd_read,
-    int _fd_write);
+#ifdef _MSC_VER
+int tls_accept_fds(struct tls *_ctx, struct tls **_cctx, UINT_PTR _fd_read, UINT_PTR _fd_write);
+EXPORT_SYM int tls_accept_socket(struct tls *_ctx, struct tls **_cctx, UINT_PTR _socket);
+#else
+int tls_accept_fds(struct tls *_ctx, struct tls **_cctx, int _fd_read, int _fd_write);
 EXPORT_SYM int tls_accept_socket(struct tls *_ctx, struct tls **_cctx, int _socket);
+#endif
 int tls_accept_cbs(struct tls *_ctx, struct tls **_cctx,
     tls_read_cb _read_cb, tls_write_cb _write_cb, void *_cb_arg);
 int tls_connect(struct tls *_ctx, const char *_host, const char *_port);
+#ifdef _MSC_VER
+    int tls_connect_fds(struct tls *_ctx, UINT_PTR _fd_read, UINT_PTR _fd_write,
+        const char *_servername);
+#else
 int tls_connect_fds(struct tls *_ctx, int _fd_read, int _fd_write,
     const char *_servername);
+#endif
 int tls_connect_servername(struct tls *_ctx, const char *_host,
     const char *_port, const char *_servername);
+#ifdef _MSC_VER
+EXPORT_SYM int tls_connect_socket(struct tls *_ctx, UINT_PTR _s, const char *_servername);
+#else
 EXPORT_SYM int tls_connect_socket(struct tls *_ctx, int _s, const char *_servername);
+#endif
 int tls_connect_cbs(struct tls *_ctx, tls_read_cb _read_cb,
     tls_write_cb _write_cb, void *_cb_arg, const char *_servername);
-int tls_handshake(struct tls *_ctx);
+EXPORT_SYM int tls_handshake(struct tls *_ctx);
 EXPORT_SYM ssize_t tls_read(struct tls *_ctx, void *_buf, size_t _buflen);
 EXPORT_SYM ssize_t tls_write(struct tls *_ctx, const void *_buf, size_t _buflen);
 EXPORT_SYM int tls_close(struct tls *_ctx);

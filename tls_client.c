@@ -32,7 +32,7 @@
 #include <limits.h>
 #include <stdlib.h>
 #ifdef _MSC_VER
-#include <io.h>
+#define close(fd) closesocket((SOCKET)fd)
 #else
 #include <unistd.h>
 #endif
@@ -159,7 +159,7 @@ tls_connect_servername(struct tls *ctx, const char *host, const char *port,
 		goto err;
 	}
 
-	ctx->socket = s;
+	ctx->socket = (SOCKET) s;
 
 	rv = 0;
 
@@ -260,19 +260,34 @@ tls_connect_common(struct tls *ctx, const char *servername)
 	return (rv);
 }
 
+#ifdef _MSC_VER
+int
+tls_connect_socket(struct tls *ctx, SOCKET s, const char *servername)
+#else
 int
 tls_connect_socket(struct tls *ctx, int s, const char *servername)
+#endif
 {
 	return tls_connect_fds(ctx, s, s, servername);
 }
 
+#ifdef _MSC_VER
+int
+tls_connect_fds(struct tls *ctx, SOCKET fd_read, SOCKET fd_write,
+		const char *servername)
+#else
 int
 tls_connect_fds(struct tls *ctx, int fd_read, int fd_write,
     const char *servername)
+#endif
 {
 	int rv = -1;
 
+#ifdef _MSC_VER
+	if (fd_read == INVALID_SOCKET || fd_write == INVALID_SOCKET) {
+#else
 	if (fd_read < 0 || fd_write < 0) {
+#endif
 		tls_set_errorx(ctx, "invalid file descriptors");
 		goto err;
 	}

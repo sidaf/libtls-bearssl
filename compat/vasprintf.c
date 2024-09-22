@@ -5,10 +5,7 @@
 
 int vasprintf(char **buf, const char *fmt, va_list ap)
 {
-#ifndef _WIN32
-  static char _T_emptybuffer = '\0';
-  va_list ap2;
-#endif /* !defined(_WIN32) */
+#ifdef _WIN32
   int chars;
   char *b;
 
@@ -16,10 +13,11 @@ int vasprintf(char **buf, const char *fmt, va_list ap)
   {
     return -1;
   }
-
-#ifdef _WIN32
   chars = _vscprintf(fmt, ap);
 #else  /* !defined(_WIN32) */
+  static char _T_emptybuffer = '\0';
+  va_list ap2;
+
   /* CAW: RAWR! We have to hope to god here that vsnprintf doesn't overwrite
    * our buffer like on some 64bit sun systems... but hey, it's time to move on
    */

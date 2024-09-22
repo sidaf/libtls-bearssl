@@ -177,7 +177,11 @@ struct tls {
 	uint32_t state;
 
 	char *servername;
+#ifdef _MSC_VER
+	SOCKET socket;
+#else
 	int socket;
+#endif
 
 	struct tls_conn *conn;
 
@@ -189,8 +193,13 @@ struct tls {
 	tls_read_cb read_cb;
 	tls_write_cb write_cb;
 	void *cb_arg;
+#ifdef _MSC_VER
+	SOCKET fd_read;
+	SOCKET fd_write;
+#else
 	int fd_read;
 	int fd_write;
+#endif
 };
 
 /* BearSSL utility functions */

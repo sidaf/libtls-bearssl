@@ -28,9 +28,9 @@
 #include <time.h>
 
 #ifdef _MSC_VER
-#include <io.h>
 #define strncasecmp _strnicmp
 #define strcasecmp _stricmp
+#include <stdio.h>
 #else
 #include <unistd.h>
 #include <pthread.h>
@@ -61,37 +61,39 @@ tls_config_load_file(struct tls_error *error, const char *filetype,
 	*buf = NULL;
 	*len = 0;
 
-	if ((fd = open(filename, O_RDONLY)) == -1) {
-		tls_error_set(error, "failed to open %s file '%s'",
-		    filetype, filename);
+  FILE *f = fopen(filename, "r");
+  if (f == NULL) {
+		tls_error_set(error, "failed to open %s file '%s'", filetype, filename);
 		goto err;
 	}
-	if (fstat(fd, &st) != 0) {
-		tls_error_set(error, "failed to stat %s file '%s'",
-		    filetype, filename);
+
+	fseek(f, 0L, SEEK_END);
+	long sz = ftell(f);
+	rewind(f);
+
+	if (sz < 0)
 		goto err;
-	}
-	if (st.st_size < 0)
-		goto err;
-	*len = (size_t)st.st_size;
+
+	*len = (size_t)sz;
 	if ((*buf = malloc(*len)) == NULL) {
-		tls_error_set(error, "failed to allocate buffer for "
-		    "%s file", filetype);
+		tls_error_set(error, "failed to allocate buffer for %s file", filetype);
 		goto err;
 	}
-	n = read(fd, *buf, *len);
+
+	n = fread(*buf, 1, sz, f);
 	if (n < 0 || (size_t)n != *len) {
-		tls_error_set(error, "failed to read %s file '%s'",
-		    filetype, filename);
+		tls_error_set(error, "failed to read %s file '%s'", filetype, filename);
 		goto err;
 	}
-	close(fd);
+
+	fclose(f);
 	return 0;
 
- err:
-	if (fd != -1)
-		close(fd);
-	freezero(*buf, *len);
+err:
+	if (f != NULL)
+		fclose(f);
+  if (*buf != NULL)
+		freezero(*buf, *len);
 	*buf = NULL;
 	*len = 0;
 

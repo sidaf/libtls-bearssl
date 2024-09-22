@@ -21,9 +21,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#ifdef _MSC_VER
-#include <io.h>
-#else
+#ifndef _MSC_VER
 #include <unistd.h>
 #endif
 #include <fcntl.h>
@@ -107,29 +105,33 @@ tls_load_file(const char *name, size_t *len, char *password)
 	if (password != NULL)
 		return (NULL);
 
-	if ((fd = open(name, O_RDONLY)) == -1)
+	FILE *f = fopen(name, "r");
+	if (f == NULL)
 		return (NULL);
 
 	/* Just load the file into memory without decryption */
-	if (fstat(fd, &st) != 0)
-		goto err;
-	if (st.st_size < 0)
-		goto err;
-	size = (size_t)st.st_size;
-	if ((buf = malloc(size)) == NULL)
-		goto err;
-	n = read(fd, buf, size);
-	if (n < 0 || (size_t)n != size)
-		goto err;
-	close(fd);
+	fseek(f, 0L, SEEK_END);
+	long sz = ftell(f);
+	rewind(f);
 
-	*len = size;
-	return (buf);
+	if (sz < 0)
+		goto err;
+
+	if ((buf = malloc(sz)) == NULL)
+		goto err;
+
+	n = fread(buf, 1, sz, f);
+	if (n < 0 || (size_t)n != sz)
+		goto err;
+
+	fclose(f);
+	*len = sz;
+  return (buf);
 
  err:
-	if (fd != -1)
-		close(fd);
-	freezero(buf, size);
+	fclose(f);
+  if (buf != NULL)
+		freezero(buf, size);
 
 	return (NULL);
 }

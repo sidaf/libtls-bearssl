@@ -375,14 +375,24 @@ tls_accept_common(struct tls *ctx)
 	return (NULL);
 }
 
+#ifdef _MSC_VER
+int
+tls_accept_socket(struct tls *ctx, struct tls **cctx, SOCKET s)
+#else
 int
 tls_accept_socket(struct tls *ctx, struct tls **cctx, int s)
+#endif
 {
 	return (tls_accept_fds(ctx, cctx, s, s));
 }
 
+#ifdef _MSC_VER
+int
+tls_accept_fds(struct tls *ctx, struct tls **cctx, SOCKET fd_read, SOCKET fd_write)
+#else
 int
 tls_accept_fds(struct tls *ctx, struct tls **cctx, int fd_read, int fd_write)
+#endif
 {
 	struct tls *conn_ctx;
 
